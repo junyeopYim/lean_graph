@@ -17,7 +17,7 @@ const easeInOutCubic = (t: number): number =>
  */
 export function useAnimatedLayout(
   layout: RadialLayout,
-  duration = 600,
+  duration = 720,
 ): Map<string, AnimatedPos> {
   const currentRef = useRef<Map<string, AnimatedPos>>(new Map());
   const mountedRef = useRef(false);
@@ -57,10 +57,15 @@ export function useAnimatedLayout(
       }
     }
 
+    // CSS cannot reach this rAF tween, so honor reduced motion here too.
+    const reduceMotion =
+      typeof window.matchMedia === "function" &&
+      window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
     const t0 = performance.now();
     let raf = 0;
     const tick = (now: number) => {
-      const t = Math.min(1, (now - t0) / duration);
+      const t = reduceMotion ? 1 : Math.min(1, (now - t0) / duration);
       const e = easeInOutCubic(t);
       const next = new Map<string, AnimatedPos>();
       for (const [id, target] of targets) {

@@ -29,9 +29,10 @@ npm start
 
 | 동작 | 결과 |
 | --- | --- |
-| 분야(children 있는 노드) 클릭 | 그 노드를 중심으로 그래프가 부드럽게 재배치 |
-| leaf(정리/정의/공리) 클릭 | 우측 상세 패널 열림 |
-| 노드 hover | 노드 1.7~2배 확대 + 미리보기 카드, 연결 노드만 밝게 유지 |
+| 노드 클릭(모든 노드) | 그 노드를 중심으로 그래프가 부드럽게 재배치 |
+| leaf(정리/정의/공리) 클릭 | 중심 이동과 동시에 우측 상세 패널 열림 |
+| 중심 노드 재클릭 | 상세 패널 토글 |
+| 노드 hover (짧은 intent 지연 후) | 노드 1.05~1.62배 확대 + 미리보기 카드, 연결 노드만 밝게 유지 |
 | 빈 배경 클릭 / Esc | 패널 닫기 → 한 단계 위로 |
 | 상단 검색 | label / 한국어 label / 분야로 검색, 선택 시 해당 노드로 이동 |
 | 좌측 사이드바 | 보기 모드(개념/커리큘럼/Lean 의존성), 종류·난이도 필터 |
@@ -70,8 +71,13 @@ focusId ──computeRadialLayout()──▶ RadialLayout(노드 극좌표, cont
 
 - 레이아웃은 focus 기준 **depth 2까지만** 그립니다. ring 1 = 직접 children,
   ring 2 = 손자 preview(브랜치당 개수 cap, 넘치면 `+N` 배지).
-- children이 없는 노드를 중심으로 보면(상세 패널의 "이 노드를 중심으로 보기")
-  선행 개념·관련·이 개념을 사용하는 결과들이 링에 배치됩니다.
+- children이 없는 leaf를 클릭해 중심으로 보면 선행 개념·관련·이 개념을
+  사용하는 결과들이 링에 배치되고, 보기 모드와 무관하게 옅은 spoke로
+  중심과 연결됩니다.
+- hover 확대는 CSS 트랜지션, focus 이동은 rAF 트위닝으로 분리되어 있고,
+  hover된 노드는 DOM 순서를 바꾸지 않고 SVG `<use>` 오버레이로 위에
+  그려집니다(트랜지션이 끊기지 않도록). `prefers-reduced-motion`을
+  존중합니다.
 - contains edge는 선명한 radial bezier, prerequisite는 dashed, related는 얇은
   곡선입니다. 보기 모드가 어떤 edge 종류를 그릴지 결정합니다
   (개념 지도: requires+related / 커리큘럼: requires+화살표 / Lean: lean_dependency+axiom_dependency).

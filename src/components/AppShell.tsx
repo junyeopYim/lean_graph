@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { DifficultyCeiling, NodeKind, ViewMode } from "@/types/graph";
 import { ROOT_ID } from "@/data/mathGraph";
 import { computeRadialLayout } from "@/lib/graphLayout";
@@ -37,37 +37,74 @@ export default function AppShell() {
   const results = useMemo(() => searchNodes(query), [query]);
   const selectedNode = selectedId ? (getNode(selectedId) ?? null) : null;
 
-  const focusOn = useCallback((id: string) => {
-    setFocusId(id);
-    setHoveredId(null);
-    setSelectedId(null);
+  // Hover intent: a short delay before (un)setting hover keeps fast mouse
+  // sweeps from making the whole graph flicker.
+  const hoverTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const clearHoverIntent = useCallback(() => {
+    if (hoverTimerRef.current) {
+      clearTimeout(hoverTimerRef.current);
+      hoverTimerRef.current = null;
+    }
   }, []);
 
-  /** Search / chip navigation: enter containers, select leaves in context. */
+  const setHoverWithIntent = useCallback(
+    (id: string | null) => {
+      clearHoverIntent();
+      const delay = id ? 70 : 110;
+      hoverTimerRef.current = setTimeout(() => {
+        setHoveredId(id);
+        hoverTimerRef.current = null;
+      }, delay);
+    },
+    [clearHoverIntent],
+  );
+
+  useEffect(() => {
+    return () => clearHoverIntent();
+  }, [clearHoverIntent]);
+
+  const focusOn = useCallback(
+    (id: string, options?: { select?: boolean }) => {
+      clearHoverIntent();
+      setFocusId(id);
+      setHoveredId(null);
+      setSelectedId(options?.select ? id : null);
+    },
+    [clearHoverIntent],
+  );
+
+  /**
+   * Every node can become the center. Leaves additionally stay selected so
+   * the detail panel opens alongside their neighborhood ring.
+   */
+  const focusNodeByClick = useCallback(
+    (id: string) => {
+      focusOn(id, { select: !hasChildren(id) });
+    },
+    [focusOn],
+  );
+
+  /** Search / chip navigation follows the same policy as clicking. */
   const navigateToNode = useCallback(
     (id: string) => {
       const node = getNode(id);
       if (!node) return;
-      if (hasChildren(id)) {
-        focusOn(id);
-        return;
-      }
-      setFocusId(node.parentId ?? ROOT_ID);
-      setHoveredId(null);
-      setSelectedId(id);
+      focusOn(id, { select: !hasChildren(id) });
     },
     [focusOn],
   );
 
   const handleNodeClick = useCallback(
     (id: string) => {
-      if (id !== focusId && hasChildren(id)) {
-        focusOn(id);
-      } else {
+      // Re-clicking the current center just toggles its detail panel.
+      if (id === focusId) {
         setSelectedId((cur) => (cur === id ? null : id));
+        return;
       }
+      focusNodeByClick(id);
     },
-    [focusId, focusOn],
+    [focusId, focusNodeByClick],
   );
 
   const goUp = useCallback(() => {
@@ -126,19 +163,14 @@ export default function AppShell() {
           enabledKinds={enabledKinds}
           difficultyCeiling={difficultyCeiling}
           onNodeClick={handleNodeClick}
-          onHover={setHoveredId}
+          onHover={setHoverWithIntent}
           onBackgroundClick={handleBackgroundClick}
         />
 
         {/* Floating chrome — kept light so the graph stays the protagonist. */}
         <div className="pointer-events-none absolute inset-0">
           <div className="absolute left-4 top-3">
-            <Breadcrumbs
-              path={breadcrumbs}
-              selected={selectedNode && selectedNode.id !== focusId ? selectedNode : null}
-              onNavigate={focusOn}
-              onUp={goUp}
-            />
+            <Breadcrumbs path={breadcrumbs} onNavigate={focusOn} onUp={goUp} />
           </div>
 
           <button
@@ -156,11 +188,11 @@ export default function AppShell() {
               mode={mode}
               enabledKinds={enabledKinds}
               difficultyCeiling={difficultyCeiling}
-              hasSelection={selectedId !== null}
+              hasSelection={selectedId !== null && selectedId !== focusId}
               onModeChange={setMode}
               onToggleKind={toggleKind}
               onDifficultyChange={setDifficultyCeiling}
-              onFocusSelected={() => selectedId && focusOn(selectedId)}
+              onFocusSelected={() => selectedId && focusNodeByClick(selectedId)}
               onResetView={() => focusOn(ROOT_ID)}
             />
           </div>
@@ -169,9 +201,11 @@ export default function AppShell() {
             <div className="absolute bottom-4 right-4 top-3">
               <DetailPanel
                 node={selectedNode}
+                isCurrentFocus={selectedNode.id === focusId}
                 onClose={() => setSelectedId(null)}
-                onFocusNode={focusOn}
+                onFocusNode={focusNodeByClick}
                 onNavigate={navigateToNode}
+                onGoUp={goUp}
               />
             </div>
           )}

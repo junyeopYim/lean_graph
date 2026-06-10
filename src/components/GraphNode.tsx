@@ -72,17 +72,21 @@ function GraphNodeInner({
         : 11
       : 9;
 
-  // Hover zoom; ring-2 nodes near the bottom edge get a reduced scale so
-  // the enlarged label stack stays inside the viewBox.
+  // Hover zoom — gentle, per ring. Ring-2 nodes near the bottom edge get a
+  // reduced scale so the enlarged label stack stays inside the viewBox.
   let scale = 1;
   if (hovered) {
-    if (ring === 2) {
+    if (isCenter) {
+      scale = 1.05;
+    } else if (ring === 2) {
+      // Effective range [1.28, 1.62]: room/stack shrinks the zoom near the
+      // bottom edge so the enlarged label stack stays inside the viewBox.
       const stack =
         r + 9 + 6.4 + (labelLines.length - 1) * 9.5 + (node.labelKo ? 9.5 : 0) + 3;
       const room = VIEWBOX.y + VIEWBOX.height - 6 - y;
-      scale = Math.min(2.0, Math.max(1.25, room / stack));
+      scale = Math.max(1.28, Math.min(room / stack, 1.62));
     } else {
-      scale = 1.7;
+      scale = 1.38;
     }
   }
 
@@ -93,12 +97,16 @@ function GraphNodeInner({
 
   return (
     <g
+      id={`gn-${node.id}`}
       transform={`translate(${x.toFixed(1)},${y.toFixed(1)})`}
       style={{
         opacity,
-        transition: "opacity 280ms ease",
+        transition: "opacity 380ms ease",
         cursor: filteredOut ? "default" : "pointer",
-        pointerEvents: filteredOut ? "none" : "auto",
+        // No explicit "auto": the hover-elevation <use> clone must inherit
+        // pointer-events:none from its <use> host, and an inline auto here
+        // would override that inside the shadow tree (hover flicker loop).
+        pointerEvents: filteredOut ? "none" : undefined,
       }}
       className="graph-node-enter"
       role="button"
@@ -110,10 +118,15 @@ function GraphNodeInner({
         onClick(node.id);
       }}
     >
+      {/* No transform-box/origin override: the SVG default origin (local
+          0,0) IS the circle center, giving a stable anchor — fill-box would
+          include the label below and drag the circle upward while scaling. */}
       <g
         style={{
           transform: `scale(${scale})`,
-          transition: "transform 240ms cubic-bezier(0.34, 1.3, 0.64, 1)",
+          transition:
+            "transform 480ms cubic-bezier(0.16, 1, 0.3, 1), filter 480ms cubic-bezier(0.16, 1, 0.3, 1)",
+          willChange: hovered ? "transform" : undefined,
         }}
       >
         {selected && (
@@ -131,7 +144,7 @@ function GraphNodeInner({
           fill={isCenter ? style.fill : style.fill}
           stroke={isCenter ? "#23304d" : style.stroke}
           strokeWidth={hovered ? 1.8 : isCenter ? 0 : ring === 2 ? 1 : 1.4}
-          style={{ transition: "stroke-width 200ms ease" }}
+          style={{ transition: "stroke-width 360ms cubic-bezier(0.16, 1, 0.3, 1)" }}
         />
         {/* Small affordance dot for nodes that can be entered. */}
         {hasChildren && !isCenter && (
@@ -183,7 +196,7 @@ function GraphNodeInner({
             fill={hovered ? style.text : "#454a59"}
             fontSize={fontSize}
             fontWeight={hovered || node.kind === "category" ? 600 : 450}
-            style={{ transition: "fill 200ms ease" }}
+            style={{ transition: "fill 360ms ease" }}
           >
             {labelLines.map((line, i) => (
               <tspan key={i} x={0} dy={i === 0 ? labelY + fontSize * 0.8 : fontSize + 1.5}>

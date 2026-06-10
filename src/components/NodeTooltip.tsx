@@ -9,6 +9,8 @@ type Props = {
   x: number;
   y: number;
   nodeR: number;
+  /** Entrance delay; 0 on hover handoffs so the card never goes blank. */
+  delayMs?: number;
 };
 
 const CARD_W = 264;
@@ -19,7 +21,7 @@ const CARD_H = 230;
  * tracks the node in graph coordinates. Flips horizontally/vertically near
  * the viewBox edges. Pointer events are disabled to avoid hover flicker.
  */
-export function NodeTooltip({ node, x, y, nodeR }: Props) {
+export function NodeTooltip({ node, x, y, nodeR, delayMs = 80 }: Props) {
   const style = KIND_STYLE[node.kind];
   const prereqs = getPrerequisites(node.id);
 
@@ -41,7 +43,14 @@ export function NodeTooltip({ node, x, y, nodeR }: Props) {
     >
       <div
         className="rounded-xl border border-black/8 bg-white/95 px-4 py-3 shadow-[0_10px_32px_rgba(38,42,64,0.16)] backdrop-blur"
-        style={{ fontSize: 11, lineHeight: 1.45, color: "#33384a" }}
+        style={{
+          fontSize: 11,
+          lineHeight: 1.45,
+          color: "#33384a",
+          opacity: 0,
+          transformOrigin: right ? "left center" : "right center",
+          animation: `node-tooltip-in 220ms cubic-bezier(0.16, 1, 0.3, 1) ${delayMs}ms forwards`,
+        }}
       >
         <div className="flex items-baseline justify-between gap-2">
           <div>

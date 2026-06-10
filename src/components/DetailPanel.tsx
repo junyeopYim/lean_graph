@@ -11,9 +11,12 @@ import {
 
 type Props = {
   node: GraphNode;
+  /** Whether this node is already the center of the graph. */
+  isCurrentFocus: boolean;
   onClose: () => void;
   onFocusNode: (id: string) => void;
   onNavigate: (id: string) => void;
+  onGoUp: () => void;
 };
 
 function Chip({ node, onClick }: { node: GraphNode; onClick: () => void }) {
@@ -39,7 +42,14 @@ function Row({ label, value }: { label: string; value: React.ReactNode }) {
   );
 }
 
-export function DetailPanel({ node, onClose, onFocusNode, onNavigate }: Props) {
+export function DetailPanel({
+  node,
+  isCurrentFocus,
+  onClose,
+  onFocusNode,
+  onNavigate,
+  onGoUp,
+}: Props) {
   const style = KIND_STYLE[node.kind];
   const prereqs = getPrerequisites(node.id);
   const related = getRelatedNodes(node.id);
@@ -151,14 +161,28 @@ export function DetailPanel({ node, onClose, onFocusNode, onNavigate }: Props) {
         )}
       </div>
 
-      <div className="border-t border-black/5 p-3">
-        <button
-          onClick={() => onFocusNode(node.id)}
-          className="w-full rounded-xl bg-[#2f3a55] py-2 text-[12.5px] font-medium text-[#f5f3ec] transition-colors hover:bg-[#3a4768]"
-        >
-          이 노드를 중심으로 보기
-        </button>
-      </div>
+      {/* Since v0.2 every click already centers its node, so the panel
+          almost always shows the current center — offer the next useful
+          move instead of a no-op "center this" button. */}
+      {(!isCurrentFocus || node.parentId) && (
+        <div className="border-t border-black/5 p-3">
+          {!isCurrentFocus ? (
+            <button
+              onClick={() => onFocusNode(node.id)}
+              className="w-full rounded-xl bg-[#2f3a55] py-2 text-[12.5px] font-medium text-[#f5f3ec] transition-colors hover:bg-[#3a4768]"
+            >
+              이 노드를 중심으로 보기
+            </button>
+          ) : (
+            <button
+              onClick={onGoUp}
+              className="w-full rounded-xl bg-[#2f3a55] py-2 text-[12.5px] font-medium text-[#f5f3ec] transition-colors hover:bg-[#3a4768]"
+            >
+              ← 상위 분야로 이동
+            </button>
+          )}
+        </div>
+      )}
     </section>
   );
 }

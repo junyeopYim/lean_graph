@@ -4,13 +4,11 @@ import type { GraphNode } from "@/types/graph";
 
 type Props = {
   path: GraphNode[];
-  /** Selected leaf appended after the focus, if any. */
-  selected?: GraphNode | null;
   onNavigate: (id: string) => void;
   onUp: () => void;
 };
 
-export function Breadcrumbs({ path, selected, onNavigate, onUp }: Props) {
+export function Breadcrumbs({ path, onNavigate, onUp }: Props) {
   const canGoUp = path.length > 1;
   return (
     <nav
@@ -26,33 +24,28 @@ export function Breadcrumbs({ path, selected, onNavigate, onUp }: Props) {
         ← 상위로
       </button>
       {path.map((n, i) => {
-        const last = i === path.length - 1 && !selected;
+        const last = i === path.length - 1;
         const label = i === 0 ? "전체 수학" : (n.labelKo ?? n.label);
         return (
           <span key={n.id} className="flex items-center gap-1">
             {i > 0 && <span className="text-[#b8b4a8]">›</span>}
-            <button
-              onClick={() => onNavigate(n.id)}
-              className={
-                last
-                  ? "font-semibold text-[#2c3145]"
-                  : "rounded px-0.5 transition-colors hover:text-[#2c3145]"
-              }
-              aria-current={last ? "page" : undefined}
-            >
-              {label}
-            </button>
+            {last ? (
+              // The current focus is not a link — clicking it would have to
+              // pick between "re-center" (no-op) and the panel toggle.
+              <span aria-current="page" className="px-0.5 font-semibold text-[#2c3145]">
+                {label}
+              </span>
+            ) : (
+              <button
+                onClick={() => onNavigate(n.id)}
+                className="rounded px-0.5 transition-colors hover:text-[#2c3145]"
+              >
+                {label}
+              </button>
+            )}
           </span>
         );
       })}
-      {selected && (
-        <span className="flex items-center gap-1">
-          <span className="text-[#b8b4a8]">›</span>
-          <span className="font-medium text-[#4a5068]">
-            {selected.labelKo ?? selected.label}
-          </span>
-        </span>
-      )}
     </nav>
   );
 }

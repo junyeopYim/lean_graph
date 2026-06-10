@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import type { GraphEdge, NodeKind, ViewMode, DifficultyCeiling } from "@/types/graph";
 import type { RadialLayout } from "@/lib/graphLayout";
 import {
@@ -121,16 +121,24 @@ export function RadialGraph({
   const hoveredLayout = hoveredId ? layout.byId.get(hoveredId) : undefined;
   const hoveredNode = hoveredId ? getNode(hoveredId) : undefined;
 
-  // Render hovered node last so its zoomed circle sits above neighbors.
-  const orderedNodes = useMemo(() => {
-    const sorted = [...layout.nodes].sort((a, b) => b.ring - a.ring);
-    if (!hoveredId) return sorted;
-    const i = sorted.findIndex((p) => p.node.id === hoveredId);
-    if (i < 0) return sorted;
-    const [h] = sorted.splice(i, 1);
-    sorted.push(h);
-    return sorted;
-  }, [layout, hoveredId]);
+  // Tooltip handoff: when hover slides directly from one node to another the
+  // entrance replay skips its 80ms delay so the card never goes blank.
+  const prevHoveredRef = useRef<string | null>(null);
+  const isHandoff =
+    prevHoveredRef.current !== null && prevHoveredRef.current !== hoveredId;
+  useEffect(() => {
+    prevHoveredRef.current = hoveredId;
+  });
+
+  // Stable render order (previews under ring-1 under the center). The
+  // hovered node must NOT be hoisted in the DOM: React would move the
+  // element, which cancels its CSS transform transition mid-tween and
+  // restarts the enter animation (a visible blink). It is elevated with a
+  // <use> overlay below instead.
+  const orderedNodes = useMemo(
+    () => [...layout.nodes].sort((a, b) => b.ring - a.ring),
+    [layout],
+  );
 
   return (
     <svg
@@ -167,10 +175,31 @@ export function RadialGraph({
             strokeWidth={1}
             strokeDasharray="1 7"
             opacity={neighborhood ? 0.45 : 0.9}
-            style={{ transition: "opacity 280ms ease" }}
+            style={{ transition: "opacity 380ms ease" }}
           />
         ))}
       </g>
+
+      {/* Leaf-focus placement spokes — drawn in every view mode so a
+          neighborhood satellite never floats fully disconnected. */}
+      {layout.spokeEdges.length > 0 && (
+        <g fill="none">
+          {layout.spokeEdges.map((e) => {
+            const s = pos(e.sourceId);
+            const t = pos(e.targetId);
+            return (
+              <path
+                key={`s:${e.sourceId}->${e.targetId}`}
+                d={radialLinkPath(s.x, s.y, s.r, t.x, t.y, t.r)}
+                stroke="#d6d0c2"
+                strokeWidth={1}
+                opacity={edgeOpacity(e.sourceId, e.targetId, 0.5)}
+                style={{ transition: "opacity 380ms ease" }}
+              />
+            );
+          })}
+        </g>
+      )}
 
       {/* Contains edges (center → ring1 → ring2) */}
       <g fill="none">
@@ -184,7 +213,7 @@ export function RadialGraph({
               stroke={e.ring === 1 ? "#c6bfae" : "#d6d0c2"}
               strokeWidth={e.ring === 1 ? 1.5 : 0.9}
               opacity={edgeOpacity(e.sourceId, e.targetId, e.ring === 1 ? 0.9 : 0.45)}
-              style={{ transition: "opacity 280ms ease" }}
+              style={{ transition: "opacity 380ms ease" }}
             />
           );
         })}
@@ -211,7 +240,7 @@ export function RadialGraph({
               strokeDasharray={st.dash}
               markerEnd={showArrow ? `url(#arrow-${e.type})` : undefined}
               opacity={o}
-              style={{ transition: "opacity 280ms ease" }}
+              style={{ transition: "opacity 380ms ease" }}
             />
           );
         })}
@@ -228,7 +257,7 @@ export function RadialGraph({
             fontSize={9}
             fill="#a39f92"
             opacity={neighborhood ? 0.25 : 0.8}
-            style={{ transition: "opacity 280ms ease" }}
+            style={{ transition: "opacity 380ms ease" }}
           >
             +{t.count}
           </text>
@@ -258,13 +287,27 @@ export function RadialGraph({
         })}
       </g>
 
-      {/* Hover preview card */}
+      {/* Hovered node painted again on top of all siblings via <use>: the
+          original element never moves in the DOM, so its scale transition
+          keeps tweening while this clone provides the elevation. */}
+      {hoveredId && hoveredLayout && (
+        <use
+          href={`#gn-${hoveredId}`}
+          aria-hidden
+          style={{ pointerEvents: "none" }}
+        />
+      )}
+
+      {/* Hover preview card — keyed by node so the entrance animation
+          replays when hover slides from one node straight to another. */}
       {hoveredNode && hoveredLayout && (
         <NodeTooltip
+          key={hoveredNode.id}
           node={hoveredNode}
           x={pos(hoveredNode.id).x}
           y={pos(hoveredNode.id).y}
           nodeR={pos(hoveredNode.id).r}
+          delayMs={isHandoff ? 0 : 80}
         />
       )}
     </svg>

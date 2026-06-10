@@ -56,6 +56,8 @@ export type TruncationBadge = {
   y: number;
 };
 
+export type SpokeEdge = { sourceId: string; targetId: string };
+
 export type RadialLayout = {
   focusId: string;
   /** True when the focus is a leaf and the ring shows its neighborhood. */
@@ -63,6 +65,13 @@ export type RadialLayout = {
   nodes: PositionedNode[];
   byId: Map<string, PositionedNode>;
   containsEdges: ContainsEdge[];
+  /**
+   * Leaf-focus placement guides: faint spokes from the focus to each
+   * neighborhood satellite, drawn regardless of the active view mode so a
+   * satellite never floats fully disconnected (relation overlays are
+   * mode-filtered).
+   */
+  spokeEdges: SpokeEdge[];
   truncations: TruncationBadge[];
 };
 
@@ -116,6 +125,7 @@ export function computeRadialLayout(focusId: string): RadialLayout {
     },
   ];
   const containsEdges: ContainsEdge[] = [];
+  const spokeEdges: SpokeEdge[] = [];
   const truncations: TruncationBadge[] = [];
 
   let ring1: Array<{ node: GraphNode; relation: PositionedNode["relation"] }> =
@@ -149,6 +159,7 @@ export function computeRadialLayout(focusId: string): RadialLayout {
       nodes,
       byId: new Map(nodes.map((p) => [p.node.id, p])),
       containsEdges,
+      spokeEdges,
       truncations,
     };
   }
@@ -187,6 +198,8 @@ export function computeRadialLayout(focusId: string): RadialLayout {
     });
     if (relation === "child") {
       containsEdges.push({ sourceId: focusId, targetId: child.id, ring: 1 });
+    } else {
+      spokeEdges.push({ sourceId: focusId, targetId: child.id });
     }
 
     const { shown, hidden } = previews[i];
@@ -230,6 +243,7 @@ export function computeRadialLayout(focusId: string): RadialLayout {
     nodes,
     byId: new Map(nodes.map((p) => [p.node.id, p])),
     containsEdges,
+    spokeEdges,
     truncations,
   };
 }
