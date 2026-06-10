@@ -27,6 +27,41 @@ export type DifficultyLevel =
 
 export type LeanDifficulty = "낮음" | "중간" | "높음" | "매우 높음";
 
+export type LeanDeclarationKind =
+  | "def"
+  | "theorem"
+  | "lemma"
+  | "axiom"
+  | "class"
+  | "structure"
+  | "instance"
+  | "inductive"
+  | "abbrev";
+
+/**
+ * A reference to a concrete Lean 4 / Mathlib declaration backing a graph
+ * node. Curated by hand for now (see data/leanCatalog.manual.ts);
+ * `confidence` records how the entry was validated.
+ */
+export type LeanDeclarationRef = {
+  name: string;
+  kind: LeanDeclarationKind;
+  module: string;
+  statement?: string;
+  informalStatement?: string;
+  docsUrl?: string;
+  sourceUrl?: string;
+  axioms?: string[];
+  imports?: string[];
+  tags?: string[];
+  /**
+   * manual: written from memory, unverified ·
+   * docs_verified: checked against mathlib4 docs / loogle ·
+   * exported: produced by a future automated export pipeline.
+   */
+  confidence: "manual" | "docs_verified" | "exported";
+};
+
 export type GraphNode = {
   id: string;
   label: string;
@@ -40,7 +75,13 @@ export type GraphNode = {
   summary?: string;
   conceptualDifficulty?: DifficultyLevel;
   leanFormalizationDifficulty?: LeanDifficulty;
+  /**
+   * @deprecated Plain declaration-name strings from the first mock; being
+   * replaced by `leanRefs`. Kept until every node is migrated.
+   */
   leanDeclarations?: string[];
+  /** Curated Lean/Mathlib declaration metadata (see LeanDeclarationRef). */
+  leanRefs?: LeanDeclarationRef[];
 };
 
 export type EdgeType =

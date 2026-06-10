@@ -27,6 +27,8 @@ type Props = {
   dimmed: boolean;
   filteredOut: boolean;
   hasChildren: boolean;
+  /** View mode is "lean": badge nodes with metadata, fade the rest. */
+  leanMode: boolean;
   onHover: (id: string | null) => void;
   onClick: (id: string) => void;
 };
@@ -42,6 +44,7 @@ function GraphNodeInner({
   dimmed,
   filteredOut,
   hasChildren,
+  leanMode,
   onHover,
   onClick,
 }: Props) {
@@ -49,7 +52,22 @@ function GraphNodeInner({
   const style = KIND_STYLE[node.kind];
   const isCenter = ring === 0;
 
-  const opacity = filteredOut ? 0.08 : dimmed ? 0.2 : ring === 2 ? 0.82 : 1;
+  const hasLean = (node.leanRefs?.length ?? 0) > 0;
+  // In Lean mode, nodes without curated metadata recede a little —
+  // except while hovered, when the node should be fully inspectable.
+  const leanFaded = leanMode && !hasLean && !isCenter && !hovered;
+
+  const opacity = filteredOut
+    ? 0.08
+    : dimmed
+      ? 0.2
+      : leanFaded
+        ? ring === 2
+          ? 0.4
+          : 0.55
+        : ring === 2
+          ? 0.82
+          : 1;
 
   // Resting ring-2 previews keep a single ellipsized line; everything else
   // wraps to at most two lines.
@@ -149,6 +167,36 @@ function GraphNodeInner({
         {/* Small affordance dot for nodes that can be entered. */}
         {hasChildren && !isCenter && (
           <circle r={2.1} cy={-r + 5.5} fill={style.stroke} opacity={0.8} />
+        )}
+
+        {/* Lean mode: ring + tiny label marking curated Lean metadata. */}
+        {leanMode && hasLean && (
+          <>
+            <circle
+              r={r + 3.5}
+              fill="none"
+              stroke="#4e8f8a"
+              strokeWidth={1.2}
+              opacity={0.85}
+            />
+            {ring < 2 && (
+              <text
+                y={-r - 7}
+                textAnchor="middle"
+                fontSize={7}
+                fontWeight={700}
+                letterSpacing={0.4}
+                fill="#3d736f"
+                // Paper-colored halo masks radial edges passing behind.
+                paintOrder="stroke"
+                stroke="#f7f5f0"
+                strokeWidth={3}
+                strokeLinejoin="round"
+              >
+                Lean
+              </text>
+            )}
+          </>
         )}
 
         {isCenter ? (

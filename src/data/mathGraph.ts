@@ -2,9 +2,11 @@ import type {
   DifficultyLevel,
   GraphEdge,
   GraphNode,
+  LeanDeclarationRef,
   LeanDifficulty,
   NodeKind,
 } from "@/types/graph";
+import { LEAN_CATALOG } from "@/data/leanCatalog.manual";
 
 /**
  * Mock knowledge graph for the Lean Graph MVP.
@@ -20,7 +22,9 @@ type NodeOpts = {
   lean?: LeanDifficulty;
   prereq?: string[];
   related?: string[];
+  /** @deprecated plain declaration names; superseded by leanRefs. */
   decls?: string[];
+  leanRefs?: LeanDeclarationRef[];
 };
 
 const seeds: GraphNode[] = [];
@@ -45,6 +49,7 @@ function node(
     prerequisiteIds: opts.prereq,
     relatedIds: opts.related,
     leanDeclarations: opts.decls,
+    leanRefs: opts.leanRefs,
   });
 }
 
@@ -128,6 +133,7 @@ node("zfc", "ZFC", "선택공리를 포함한 ZF", "structure", "foundations", {
   prereq: ["zf", "ax_choice"],
   related: ["zorn_lemma"],
   decls: ["Classical.choice", "Mathlib.SetTheory.ZFC.Basic"],
+  leanRefs: LEAN_CATALOG.zfc,
 });
 node("ax_extensionality", "Extensionality", "외연 공리", "axiom", "foundations", {
   summary: "같은 원소를 갖는 두 집합은 같다. 집합의 정체성을 원소로 규정합니다.",
@@ -184,6 +190,7 @@ node("ax_choice", "Choice", "선택공리", "axiom", "foundations", {
   lean: "낮음",
   related: ["zorn_lemma", "zfc"],
   decls: ["Classical.choice", "Classical.axiomOfChoice"],
+  leanRefs: LEAN_CATALOG.ax_choice,
 });
 
 /* ------------------------------------------------------------------ */
@@ -195,6 +202,7 @@ node("set", "Set", "집합", "definition", "set_theory", {
   cd: "입문",
   lean: "낮음",
   decls: ["Set"],
+  leanRefs: LEAN_CATALOG.set,
 });
 node("element", "Element", "원소", "definition", "set_theory", {
   summary: "집합에 속하는 대상. 소속 관계 ∈ 는 집합론의 유일한 원시 관계입니다.",
@@ -209,6 +217,7 @@ node("subset", "Subset", "부분집합", "definition", "set_theory", {
   lean: "낮음",
   prereq: ["set", "element"],
   decls: ["Set.Subset", "HasSubset.Subset"],
+  leanRefs: LEAN_CATALOG.subset,
 });
 node("ordered_pair", "Ordered Pair", "순서쌍", "definition", "set_theory", {
   summary: "순서가 있는 쌍 (a, b). 쿠라토프스키 구성 {{a},{a,b}}로 집합 안에서 정의됩니다.",
@@ -230,6 +239,7 @@ node("function", "Function", "함수", "definition", "set_theory", {
   lean: "낮음",
   prereq: ["set", "relation"],
   decls: ["Function", "Function.Injective", "Function.Surjective"],
+  leanRefs: LEAN_CATALOG.function,
 });
 node("natural_number", "Natural Number", "자연수", "definition", "set_theory", {
   summary: "0, 1, 2, …. 무한 공리로 존재가 보장되는 가장 작은 귀납적 집합으로 구성됩니다.",
@@ -353,6 +363,7 @@ node("yoneda", "Yoneda Lemma", "요네다 보조정리", "theorem", "category_th
   lean: "높음",
   prereq: ["category_def", "functor", "natural_transformation"],
   decls: ["CategoryTheory.yoneda", "CategoryTheory.yonedaEquiv"],
+  leanRefs: LEAN_CATALOG.yoneda,
 });
 
 /* ------------------------------------------------------------------ */
@@ -383,6 +394,7 @@ node("group", "Group", "군", "structure", "group_theory", {
   lean: "낮음",
   prereq: ["set", "function"],
   decls: ["Group", "Monoid", "Mathlib.Algebra.Group.Defs"],
+  leanRefs: LEAN_CATALOG.group,
 });
 node("abelian_group", "Abelian Group", "아벨군", "structure", "group_theory", {
   summary: "연산이 교환법칙을 만족하는 군. 가군·벡터공간의 덧셈 구조가 됩니다.",
@@ -451,6 +463,7 @@ node("ring", "Ring", "환", "structure", "ring_theory", {
   lean: "낮음",
   prereq: ["group", "abelian_group"],
   decls: ["Ring", "CommRing"],
+  leanRefs: LEAN_CATALOG.ring,
 });
 node("ideal", "Ideal", "아이디얼", "definition", "ring_theory", {
   summary: "곱셈에 대해 흡수적인 부분가군. 환의 몫을 만드는 데 쓰입니다.",
@@ -490,6 +503,7 @@ node("field", "Field", "체", "structure", "field_theory", {
   lean: "낮음",
   prereq: ["ring"],
   decls: ["Field"],
+  leanRefs: LEAN_CATALOG.field,
 });
 node("field_extension", "Field Extension", "체의 확대", "definition", "field_theory", {
   summary: "체 K를 포함하는 더 큰 체 L. 확대 L/K의 차수가 기본 불변량입니다.",
@@ -597,6 +611,7 @@ node("vector_space", "Vector Space", "벡터공간", "structure", "linear_algebr
   prereq: ["field", "abelian_group"],
   related: ["module"],
   decls: ["Module", "Mathlib.LinearAlgebra.Basic"],
+  leanRefs: LEAN_CATALOG.vector_space,
 });
 node("linear_map", "Linear Map", "선형사상", "definition", "linear_algebra", {
   summary: "덧셈과 스칼라배를 보존하는 함수. 행렬은 그 좌표 표현입니다.",
@@ -762,6 +777,7 @@ node("topological_space", "Topological Space", "위상공간", "structure", "top
   lean: "낮음",
   prereq: ["set", "subset"],
   decls: ["TopologicalSpace"],
+  leanRefs: LEAN_CATALOG.topological_space,
 });
 node("open_set", "Open Set", "열린집합", "definition", "topology", {
   summary: "위상을 이루는 기본 단위. 각 점 주위에 '여유'가 있는 집합입니다.",
@@ -793,6 +809,7 @@ node("compactness", "Compactness", "컴팩트성", "definition", "topology", {
   prereq: ["topological_space", "open_set"],
   related: ["heine_borel", "bolzano_weierstrass"],
   decls: ["IsCompact", "CompactSpace"],
+  leanRefs: LEAN_CATALOG.compactness,
 });
 node("connectedness", "Connectedness", "연결성", "definition", "topology", {
   summary: "공간이 두 개의 분리된 열린집합으로 쪼개지지 않는 성질.",
@@ -822,6 +839,7 @@ node("heine_borel", "Heine–Borel Theorem", "하이네–보렐 정리", "theor
   prereq: ["compactness", "closed_set"],
   related: ["bolzano_weierstrass"],
   decls: ["Metric.isCompact_iff_isClosed_bounded"],
+  leanRefs: LEAN_CATALOG.heine_borel,
 });
 node("stone_weierstrass", "Stone–Weierstrass Theorem", "스톤–바이어슈트라스 정리", "theorem", "topology", {
   summary: "컴팩트 공간 위의 연속함수는 점을 분리하는 부분대수로 균등 근사할 수 있다.",
@@ -1014,6 +1032,7 @@ node("dct", "Dominated Convergence Theorem", "지배수렴정리", "theorem", "m
   prereq: ["lebesgue_integral", "measurable_function", "almost_everywhere"],
   related: ["fatou", "mct"],
   decls: ["MeasureTheory.tendsto_integral_of_dominated_convergence"],
+  leanRefs: LEAN_CATALOG.dct,
 });
 
 /* Functional Analysis */
@@ -1024,6 +1043,7 @@ node("normed_space", "Normed Space", "노름공간", "structure", "functional_an
   lean: "낮음",
   prereq: ["vector_space"],
   decls: ["NormedSpace", "NormedAddCommGroup"],
+  leanRefs: LEAN_CATALOG.normed_space,
 });
 node("banach_space", "Banach Space", "바나흐 공간", "structure", "functional_analysis", {
   summary: "완비인 노름공간. 코시열이 항상 수렴하므로 극한 논증이 자유롭습니다.",
@@ -1087,6 +1107,7 @@ node("hahn_banach", "Hahn–Banach Theorem", "한–바나흐 정리", "theorem"
   prereq: ["vector_space", "seminorm", "convexity", "zorn_lemma"],
   related: ["dual_space"],
   decls: ["exists_extension_norm_eq", "Real.exists_extension_of_le_sublinear"],
+  leanRefs: LEAN_CATALOG.hahn_banach,
 });
 node("ubp", "Uniform Boundedness Principle", "균등유계원리", "theorem", "functional_analysis", {
   summary: "점마다 유계인 작용소족은 노름으로도 균등하게 유계이다(바나흐–슈타인하우스).",

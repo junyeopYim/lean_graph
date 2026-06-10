@@ -120,6 +120,52 @@ type GraphEdge = {
 - `axiom_dependency` ← 선택공리(Choice)에 기대는 결과들(Zorn, Hahn–Banach 등)
 - 존재하지 않는 id를 참조하면 모듈 로드 시점에 throw → 데이터 오타 즉시 검출
 
+## Lean metadata layer (v0.3)
+
+그래프 노드에 실제 Lean 4 / Mathlib 선언 메타데이터를 붙이는 첫 단계입니다.
+브라우저에서 Lean을 실행하지 않고, Mathlib을 자동 추출하지도 않습니다 —
+**수동 큐레이션된 카탈로그**([leanCatalog.manual.ts](src/data/leanCatalog.manual.ts))가
+유일한 데이터 소스입니다.
+
+- `GraphNode.leanRefs?: LeanDeclarationRef[]` — 선언 이름, kind(def/theorem/class/…),
+  모듈, 시그니처, 비형식 설명, docs/source 링크, 태그를 담습니다.
+  현재 16개 핵심 노드(선택공리, ZFC, 군/환/체, 벡터공간, 노름공간,
+  Hahn–Banach, 지배수렴정리, 요네다, 위상공간, 컴팩트성, 하이네–보렐 등)에
+  연결되어 있습니다.
+- DetailPanel의 **Lean 탭**에서 선언 카드를 보여줍니다: docs/source 새 탭
+  열기, `import` / `#check` / `#print axioms` 클립보드 복사 버튼 포함.
+- **검색**이 선언 이름·모듈·태그도 인덱싱합니다 — `exists_extension`,
+  `HahnBanach`, `Normed.Module` 같은 검색어로 노드를 찾을 수 있습니다.
+- **Lean 형식 의존성 모드**에서 leanRefs가 있는 노드는 청록 외곽선과
+  "Lean" 마커로 구분되고, 없는 노드는 살짝 흐려집니다.
+
+### `leanRefs.confidence`의 의미
+
+| 값 | 의미 |
+| --- | --- |
+| `docs_verified` | 큐레이션 시점에 loogle.lean-lang.org / mathlib4 docs로 이름·모듈·kind를 확인함 |
+| `manual` | 기억에 의존해 작성 — 모듈 경로가 현재 Mathlib과 다를 수 있음 |
+| `exported` | (예약) 향후 자동 추출 파이프라인이 생성한 항목 |
+
+현재 카탈로그의 모든 항목은 `docs_verified`이지만, Mathlib은 모듈 경로
+리팩터링이 잦으므로 시간이 지나면 다시 어긋날 수 있습니다.
+
+### 왜 브라우저에서 Lean을 실행하지 않나
+
+Lean + Mathlib 툴체인은 수 GB 규모이고 elaborator는 무거워서 웹 프런트엔드에
+넣는 것은 비현실적입니다. 이 앱은 "지도"이지 "에디터"가 아닙니다 — 대신
+`#check` / `#print axioms` 명령을 복사해 로컬 Lean이나
+[live.lean-lang.org](https://live.lean-lang.org)에 붙여넣는 워크플로를
+지원합니다.
+
+### 다음 단계 (계획)
+
+수동 카탈로그는 곧 한계에 닿으므로, `lean4export` 또는 작은 Lean
+메타프로그램(`#eval` 기반 JSON emitter)으로 **generated catalog**
+(`leanCatalog.generated.json`)를 만들어 동일한 `LeanDeclarationRef` 형태로
+병합할 계획입니다. UI는 `confidence: "exported"` 항목을 그대로 렌더링하면
+되고, 카탈로그 파일만 교체하면 됩니다.
+
 ## 추후 실제 Lean/Mathlib 데이터와 연결하려면
 
 바꿔야 할 곳은 사실상 한 곳입니다.

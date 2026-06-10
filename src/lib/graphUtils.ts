@@ -104,6 +104,20 @@ export function getNeighborhoodIds(id: string): Set<string> {
 /* Search                                                              */
 /* ------------------------------------------------------------------ */
 
+/**
+ * Lean-side searchable text per node: declaration names, modules, tags and
+ * the legacy plain declaration strings. Precomputed once at module load.
+ */
+const leanSearchIndex = new Map<string, string>();
+for (const n of GRAPH_NODES) {
+  const parts: string[] = [];
+  for (const ref of n.leanRefs ?? []) {
+    parts.push(ref.name, ref.module, ...(ref.tags ?? []));
+  }
+  parts.push(...(n.leanDeclarations ?? []));
+  if (parts.length > 0) leanSearchIndex.set(n.id, parts.join(" ").toLowerCase());
+}
+
 export function searchNodes(query: string, limit = 8): GraphNode[] {
   const q = query.trim().toLowerCase();
   if (q.length === 0) return [];
@@ -112,9 +126,11 @@ export function searchNodes(query: string, limit = 8): GraphNode[] {
     const label = n.label.toLowerCase();
     const ko = (n.labelKo ?? "").toLowerCase();
     const domain = (n.domain ?? []).join(" ").toLowerCase();
+    const lean = leanSearchIndex.get(n.id);
     let score = -1;
     if (label.startsWith(q) || ko.startsWith(q)) score = 0;
     else if (label.includes(q) || ko.includes(q)) score = 1;
+    else if (lean?.includes(q)) score = 1.5;
     else if (n.id.includes(q.replaceAll(" ", "_"))) score = 2;
     else if (domain.includes(q)) score = 3;
     if (score >= 0) scored.push({ node: n, score });

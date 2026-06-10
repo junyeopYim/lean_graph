@@ -280,6 +280,7 @@ export function RadialGraph({
               dimmed={neighborhood !== null && !neighborhood.has(p.node.id)}
               filteredOut={filteredOut.has(p.node.id)}
               hasChildren={hasChildren(p.node.id)}
+              leanMode={mode === "lean"}
               onHover={onHover}
               onClick={onNodeClick}
             />

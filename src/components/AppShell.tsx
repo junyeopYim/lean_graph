@@ -200,6 +200,7 @@ export default function AppShell() {
           {selectedNode && (
             <div className="absolute bottom-4 right-4 top-3">
               <DetailPanel
+                key={selectedNode.id}
                 node={selectedNode}
                 isCurrentFocus={selectedNode.id === focusId}
                 onClose={() => setSelectedId(null)}
